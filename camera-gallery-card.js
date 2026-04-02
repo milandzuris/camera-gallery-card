@@ -20,7 +20,7 @@ const THUMB_SIZE = 86;
 const DEFAULT_ALLOW_BULK_DELETE = true;
 const DEFAULT_ALLOW_DELETE = true;
 const DEFAULT_BAR_OPACITY = 30;
-const DEFAULT_BROWSE_TIMEOUT_MS = 3000;
+const DEFAULT_BROWSE_TIMEOUT_MS = 8000;
 const DEFAULT_DELETE_CONFIRM = true;
 const DEFAULT_DELETE_PREFIX = "/config/www/";
 const DEFAULT_DELETE_SERVICE = "";
@@ -2402,6 +2402,7 @@ class CameraGalleryCard extends LitElement {
     }
 
     this._ms.loading = true;
+    this.requestUpdate();
 
     try {
       const visibleCap = this._normMaxMedia(this.config?.max_media);
@@ -2439,15 +2440,10 @@ class CameraGalleryCard extends LitElement {
             // For single-root: progressively show first items while the rest loads
             const onProgress = roots.length === 1
               ? (partial) => {
-                  if (this._ms.list.length === 0 && partial.length >= 3) {
+                  if (partial.length >= 3) { // ← odobrať this._ms.list.length === 0
                     this._ms.list = partial
                       .filter((x) => !!x?.media_content_id)
-                      .map((x) => ({
-                        cls: String(x.media_class || ""),
-                        id: String(x.media_content_id || ""),
-                        mime: String(x.mime_type || ""),
-                        title: String(x.title || ""),
-                      }))
+                      .map((x) => ({ ... }))
                       .filter((x) => !!x.id)
                       .slice(0, internalCap);
                     this.requestUpdate();
@@ -4168,10 +4164,12 @@ class CameraGalleryCard extends LitElement {
     const visibleObjectFilters = this._getVisibleObjectFilters();
 
     if (!rawItems.length) {
-      if (usingMediaSource && this._ms?.loading) {
-        return html`<div class="empty">Loading media…</div>`;
+      if (!this._hasLiveConfig()) {
+        if (usingMediaSource && this._ms?.loading) {
+          return html`<div class="empty">Loading media…</div>`;
+        }
+        return html`<div class="empty">No media found.</div>`;
       }
-      return html`<div class="empty">No media found.</div>`;
     }
 
     const withDt = rawItems.map((src, idx) => {
